@@ -31,14 +31,16 @@ def init_mysql():
     # create transmission table: source_checkpoint_id, source_time, target_checkpoint_id, target_time
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transmissions (
+        id INT AUTO_INCREMENT PRIMARY KEY, 
         source_checkpoint_id VARCHAR(10),
         source_time INT,
         target_checkpoint_id VARCHAR(10) NOT NULL,
         target_time INT NOT NULL,
-        PRIMARY KEY (source_checkpoint_id, source_time),
+        INDEX idx_source (source_checkpoint_id, source_time),       
         FOREIGN KEY (source_checkpoint_id) REFERENCES checkpoints(checkpoint_id) ON DELETE CASCADE,
         FOREIGN KEY (target_checkpoint_id) REFERENCES checkpoints(checkpoint_id) ON DELETE CASCADE
     );
+
     """)
     
     # create risk table: checkpoint_id, time, risk

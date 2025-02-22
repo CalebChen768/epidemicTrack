@@ -40,4 +40,60 @@ class DBService:
         cursor.execute("INSERT INTO transmissions (source_checkpoint_id, source_time, target_checkpoint_id, target_time) VALUES (%s, %s, %s, %s)", (source_checkpoint_id, source_time, target_checkpoint_id, target_time))
         self.connection.commit()
 
-    
+    def set_risk(self, visited_place: list, risk):
+        """
+            set the risk of a checkpoint at a specific time
+            -visited_place: [{""checkpoint_id": "xxx", "time": 123}, ...]
+        """
+
+        result = []
+        for place in visited_place:
+            print(place)
+            result += self._get_all_checkpoints(place["checkpoint_id"], place["time"], risk) 
+        return list(set(result))
+
+    def _get_all_checkpoints(self, checkpoint_id, source_time, time_window=3, current_depth=0, results=None):
+        """
+            recursive function to find the target_time and target_checkpoint of a given checkpoint:
+            - time-window: the maximum depth of the search
+        """
+        # check if the current depth exceeds the time window
+        if results is None:
+            results = []
+
+        # if the current depth exceeds the time window, return results
+            return results
+
+        cursor = self.connection.cursor()
+        query = """
+            SELECT target_time, target_checkpoint 
+            FROM checkpoints 
+            WHERE source_checkpoint = %s 
+            AND ABS(source_time - %s) = (
+                SELECT MIN(ABS(source_time - %s))
+                FROM checkpoints
+                WHERE source_checkpoint = %s
+            )
+            LIMIT 1
+        """
+        cursor.execute(query, (checkpoint_id, source_time, source_time, checkpoint_id))
+        result = cursor.fetchone()
+        print(result)
+        if result:
+            target_time, target_checkpoint = result
+            # calculate time difference
+            time_diff = abs(target_time - source_time)
+            results.append({
+                "source_checkpoint": checkpoint_id,
+                "target_time": target_time,
+                "time_diff": time_diff,
+                "target_checkpoint": target_checkpoint
+            })
+            print(f"Depth {current_depth}: {checkpoint_id} -> {target_checkpoint}, time_diff: {time_diff}")
+            # recursive call
+            if target_checkpoint:
+                return self._get_all_checkpoints(target_checkpoint, target_time, time_window, current_depth + 1, results)
+            else:
+                return results
+        else:
+            return results
