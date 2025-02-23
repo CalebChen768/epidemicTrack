@@ -123,3 +123,27 @@ class DBService:
             return final_results
         else:
             return final_results
+        
+
+    def get_risk_level(self, visited_place: list):
+        """
+        Check the highest risk level among visited places.
+        """
+        cursor = self.connection.cursor()
+
+        sql = """
+        SELECT risk
+        FROM risks 
+        WHERE (checkpoint_id, time) IN ({})
+        ORDER BY FIELD(risk, 'high', 'medium')  
+        LIMIT 1;
+        """.format(', '.join(['(%s, %s)'] * len(visited_place)))
+
+        params = [item for place in visited_place for item in (place['checkpoint_id'], place['time'])]
+
+        cursor.execute(sql, params)
+        result = cursor.fetchone()
+        
+        return result[0] if result else "low"
+
+            
