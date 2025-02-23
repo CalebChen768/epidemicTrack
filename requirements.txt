@@ -1,0 +1,8 @@
+pymysql
+cryptography
+requests
+flask
+dotenv
+uuid
+base64
+pandas
