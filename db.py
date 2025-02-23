@@ -2,6 +2,8 @@ import pymysql
 from dotenv import load_dotenv
 import os
 from IDGenerator import IDGenerator
+import pandas as pd
+
 
 class DBService:
     def __init__(self):
@@ -40,60 +42,84 @@ class DBService:
         cursor.execute("INSERT INTO transmissions (source_checkpoint_id, source_time, target_checkpoint_id, target_time) VALUES (%s, %s, %s, %s)", (source_checkpoint_id, source_time, target_checkpoint_id, target_time))
         self.connection.commit()
 
-    def set_risk(self, visited_place: list, risk):
+    def set_risk(self, visited_place: list):
         """
             set the risk of a checkpoint at a specific time
             -visited_place: [{""checkpoint_id": "xxx", "time": 123}, ...]
         """
 
         result = []
+        data = []
         for place in visited_place:
-            print(place)
-            result += self._get_all_checkpoints(place["checkpoint_id"], place["time"], risk) 
-        return list(set(result))
+            # print("place:", place)
+            data += [(place["checkpoint_id"], place["time"], "high")]
+            result += self._get_all_checkpoints(place["checkpoint_id"], place["time"], place["time"]) 
 
-    def _get_all_checkpoints(self, checkpoint_id, source_time, time_window=3, current_depth=0, results=None):
+        # group by target_checkpoint and target_time, then get the row with the minimum time_diff
+        df = pd.DataFrame(result)
+        filtered_df = df.loc[df.groupby(['target_checkpoint', 'target_time'])['time_diff'].idxmin()]
+
+        result = filtered_df.to_dict(orient='records')
+
+        data += [(res["target_checkpoint"], res["target_time"], res["risk"]) for res in result]
+        cursor = self.connection.cursor()
+        sql = """
+        INSERT INTO risks (checkpoint_id, time, risk)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE 
+            risk = CASE 
+                WHEN risk = 'medium' AND VALUES(risk) = 'high' THEN 'high'
+                ELSE risk
+            END;
+        """
+
+        cursor.executemany(sql, data)
+        self.connection.commit()
+
+        return result
+
+    def _get_all_checkpoints(self, checkpoint_id, source_time, start_time, time_window=5, current_depth=0, final_results=None):
         """
             recursive function to find the target_time and target_checkpoint of a given checkpoint:
             - time-window: the maximum depth of the search
         """
         # check if the current depth exceeds the time window
-        if results is None:
-            results = []
+        if final_results is None:
+            final_results = []
 
         # if the current depth exceeds the time window, return results
-            return results
+        print(current_depth, time_window)
+        if current_depth >= time_window:
+            return final_results
 
         cursor = self.connection.cursor()
         query = """
-            SELECT target_time, target_checkpoint 
-            FROM checkpoints 
-            WHERE source_checkpoint = %s 
-            AND ABS(source_time - %s) = (
-                SELECT MIN(ABS(source_time - %s))
-                FROM checkpoints
-                WHERE source_checkpoint = %s
-            )
-            LIMIT 1
+            SELECT target_time, target_checkpoint_id
+            FROM transmissions
+            WHERE source_checkpoint_id = %s
+            AND source_time = %s
         """
-        cursor.execute(query, (checkpoint_id, source_time, source_time, checkpoint_id))
-        result = cursor.fetchone()
-        print(result)
-        if result:
-            target_time, target_checkpoint = result
-            # calculate time difference
-            time_diff = abs(target_time - source_time)
-            results.append({
-                "source_checkpoint": checkpoint_id,
-                "target_time": target_time,
-                "time_diff": time_diff,
-                "target_checkpoint": target_checkpoint
-            })
-            print(f"Depth {current_depth}: {checkpoint_id} -> {target_checkpoint}, time_diff: {time_diff}")
-            # recursive call
-            if target_checkpoint:
-                return self._get_all_checkpoints(target_checkpoint, target_time, time_window, current_depth + 1, results)
-            else:
-                return results
+
+        cursor.execute(query, (checkpoint_id, source_time))
+        results = cursor.fetchall()  
+        # print(final_results)
+        if results:
+            for result in results:
+                # print("result:", result)
+                target_time, target_checkpoint = result
+                # calculate time difference
+                time_diff = abs(target_time - start_time)
+                final_results.append({
+                    "source_checkpoint": checkpoint_id,
+                    "target_time": target_time,
+                    "time_diff": time_diff,
+                    "target_checkpoint": target_checkpoint,
+                    "risk": "medium"
+                })
+                # print(f"Depth {current_depth}: {checkpoint_id} -> {target_checkpoint}, time_diff: {time_diff}")
+                # recursive call
+                if target_checkpoint:
+                    final_results += self._get_all_checkpoints(target_checkpoint, target_time, start_time, time_window, current_depth + 1)
+            return final_results
         else:
-            return results
+            return final_results

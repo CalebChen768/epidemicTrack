@@ -36,7 +36,8 @@ def init_mysql():
         source_time INT,
         target_checkpoint_id VARCHAR(10) NOT NULL,
         target_time INT NOT NULL,
-        INDEX idx_source (source_checkpoint_id, source_time),       
+        INDEX idx_source (source_checkpoint_id, source_time),     
+        UNIQUE KEY (source_checkpoint_id, source_time, target_checkpoint_id, target_time),  
         FOREIGN KEY (source_checkpoint_id) REFERENCES checkpoints(checkpoint_id) ON DELETE CASCADE,
         FOREIGN KEY (target_checkpoint_id) REFERENCES checkpoints(checkpoint_id) ON DELETE CASCADE
     );
