@@ -119,8 +119,11 @@ class DBService:
                 ELSE risk
             END;
         """
+        print("-------------------------------------------")
+        print("saving encrypted data to database")
+        print("-------------------------------------------")
 
-        print("saved data:")
+        print(server_data[['encrypted', 'risk']])
         # print(server_data)
         cursor.executemany(sql, server_data[['encrypted', 'risk']].values.tolist())
         self.connection.commit()

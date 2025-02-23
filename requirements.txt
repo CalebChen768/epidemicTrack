@@ -6,3 +6,5 @@ dotenv
 uuid
 base64
 pandas
+py_ecc
+flask_limiter

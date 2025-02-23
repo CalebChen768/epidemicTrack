@@ -60,7 +60,11 @@ class Client:
         submit['encrypted'] = submit.apply(
             lambda row: hash_and_encrypt(row['checkpoint_id'] + str(row['time']), client_private_key), axis=1
         )
+        print("-------------------------------------------")
+        print("client sending encrypted data to server")
+        print("-------------------------------------------")
 
+        print(submit['encrypted'])
         response = requests.post(f"{self.url}/safe_psi", json={"client_data_encrpted": submit['encrypted'].tolist()})
         # print(response.json())
         
@@ -74,7 +78,11 @@ class Client:
         server_data_encrypted_df['double_encrypted'] = server_data_encrypted_df['encrypted'].apply(
             lambda enc: pow(enc, client_private_key, P)
         )
+        print("-------------------------------------------")
+        print("client double encrypting data from server")
+        print("-------------------------------------------")
 
+        print(server_data_encrypted_df['double_encrypted'])
         # print(server_data_encrypted_df)
 
         # print(client_data_double_encrypted)
