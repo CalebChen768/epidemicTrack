@@ -1,6 +1,10 @@
 import requests
 import json
 import time
+import pandas as pd
+from psi_utils import hash_and_encrypt, P
+
+client_private_key = 654321
 
 class Client:
     def __init__(self):
@@ -46,6 +50,45 @@ class Client:
         print(submit)
         response = requests.post(f"{self.url}/safe", json={"visited_place": submit})
         print(response.json())
+    
+    def is_safe_psi(self):
+        time_now = self._get_current_time()
+        submit = [{"checkpoint_id": place[0], "time": place[1]} for place in self.visited_places if place[1] >= time_now-self.time_window and place[0] != "HOME"]
+        # to Dataframe
+        submit = pd.DataFrame(submit)
+        # to encrypted
+        submit['encrypted'] = submit.apply(
+            lambda row: hash_and_encrypt(row['checkpoint_id'] + str(row['time']), client_private_key), axis=1
+        )
+
+        response = requests.post(f"{self.url}/safe_psi", json={"client_data_encrpted": submit['encrypted'].tolist()})
+        # print(response.json())
+        
+        client_data_double_encrypted = response.json()["client_data_encrpted"]
+        server_data_encrypted = response.json()["server_data_encrpted"]
+        server_data_encrypted_df = pd.DataFrame(server_data_encrypted, columns=['encrypted', 'risk'])
+        # print(server_data_encrypted_df)
+        # server_data_encrypted_df['encrypted'] = server_data_encrypted_df['encrypted'].astype(int) 
+
+
+        server_data_encrypted_df['double_encrypted'] = server_data_encrypted_df['encrypted'].apply(
+            lambda enc: pow(enc, client_private_key, P)
+        )
+
+        # print(server_data_encrypted_df)
+
+        # print(client_data_double_encrypted)
+        
+        # find intersection bwteen client_data_double_encrypted and server_data_encrypted_df['double_encrypted'] and get risks
+        matched = pd.merge(pd.DataFrame(client_data_double_encrypted, columns=['double_encrypted']), server_data_encrypted_df, on='double_encrypted', how='inner')
+        if 'high' in matched['risk'].values:
+            print("There are high risk in the visited places.")
+        elif 'medium' in matched['risk'].values:
+            print("There are medium risk in the visited places.")
+        else:
+            print("There is no high risk in the visited places.")
+        
+
 
 if __name__ == '__main__':
     client = Client()
@@ -61,7 +104,7 @@ if __name__ == '__main__':
     client.scan(cpt2)
 
     client.report()
-    client.is_safe()
+    client.is_safe_psi()
 
 
 

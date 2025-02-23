@@ -54,6 +54,12 @@ def init_mysql():
         FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(checkpoint_id) ON DELETE CASCADE
     );
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS risks_psi (
+        encrypted DECIMAL(40, 0) PRIMARY KEY,
+        risk ENUM('medium', 'high') NOT NULL
+    );
+    """)
 
     connection.commit()
 

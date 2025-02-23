@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 from IDGenerator import IDGenerator
 import pandas as pd
-
+from decimal import Decimal
 
 class DBService:
     def __init__(self):
@@ -77,6 +77,56 @@ class DBService:
         self.connection.commit()
 
         return result
+    
+
+    # ------------------------------------
+    # additional security feature
+    def set_risk_with_psi(self, visited_place: list):
+        """
+            same with set_risk, but with encrypted data for PSI
+        """        
+        from psi_utils import hash_and_encrypt
+        from server import server_private_key
+
+        result = []
+        data = []
+        for place in visited_place:
+            # print("place:", place)
+            data += [(place["checkpoint_id"], place["time"], "high")]
+            result += self._get_all_checkpoints(place["checkpoint_id"], place["time"], place["time"]) 
+
+        # group by target_checkpoint and target_time, then get the row with the minimum time_diff
+        df = pd.DataFrame(result)
+        filtered_df = df.loc[df.groupby(['target_checkpoint', 'target_time'])['time_diff'].idxmin()]
+
+        result = filtered_df.to_dict(orient='records')
+
+        data += [(res["target_checkpoint"], res["target_time"], res["risk"]) for res in result]
+       
+        server_data = pd.DataFrame(data, columns=['checkpoint_id', 'time', 'risk'])
+        server_data['encrypted'] = server_data.apply(
+            lambda row: Decimal(hash_and_encrypt(row['checkpoint_id'] + str(row['time']), server_private_key)), axis=1
+        )
+
+        # save ['encrypted', 'risk' ] to the database
+        cursor = self.connection.cursor()
+        sql = """
+        INSERT INTO risks_psi (encrypted, risk)
+        VALUES (%s, %s)
+        ON DUPLICATE KEY UPDATE 
+            risk = CASE 
+                WHEN risk = 'medium' AND VALUES(risk) = 'high' THEN 'high'
+                ELSE risk
+            END;
+        """
+
+        print("saved data:")
+        # print(server_data)
+        cursor.executemany(sql, server_data[['encrypted', 'risk']].values.tolist())
+        self.connection.commit()
+        return server_data[['encrypted', 'risk']].to_dict(orient='records')
+    # ------------------------------------
+        
 
     def _get_all_checkpoints(self, checkpoint_id, source_time, start_time, time_window=5, current_depth=0, final_results=None):
         """
@@ -143,7 +193,24 @@ class DBService:
 
         cursor.execute(sql, params)
         result = cursor.fetchone()
-        
+
         return result[0] if result else "low"
 
             
+    def get_risk_level_psi(self):
+        """
+        Get the risk level from the encrypted data
+        """
+        cursor = self.connection.cursor()
+
+        sql = """
+        SELECT encrypted, risk
+        FROM risks_psi;
+        """
+
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        # print("fetched data")
+        result = [(int(row[0]), row[1]) for row in result]
+        # print(result)
+        return result
