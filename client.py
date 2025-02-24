@@ -142,8 +142,13 @@ if __name__ == '__main__':
     # client1 report
     client1.report()
 
+    # client2 check
+    print("client2 check")
+    client2.is_safe_psi()
+
     # client3 check
-    client3.is_safe()
+    print("client3 check")
+    client3.is_safe_psi()
 
 
 
