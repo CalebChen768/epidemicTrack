@@ -99,21 +99,51 @@ class Client:
 
 
 if __name__ == '__main__':
-    client = Client()
-    cpt1 = client.create_checkpoint()
-    cpt2 = client.create_checkpoint()
-    cpt3 = client.create_checkpoint()
+    # client = Client()
+    # cpt1 = client.create_checkpoint()
+    # cpt2 = client.create_checkpoint()
+    # cpt3 = client.create_checkpoint()
 
-    client.scan(cpt1)
-    client.at_home()
-    client.scan(cpt2)
-    client.scan(cpt3)
-    client.scan(cpt1)
-    client.scan(cpt2)
+    # client.scan(cpt1)
+    # client.at_home()
+    # client.scan(cpt2)
+    # client.scan(cpt3)
+    # client.scan(cpt1)
+    # client.scan(cpt2)
 
-    client.report()
-    client.is_safe_psi()
+    # client.report()
+    # client.is_safe_psi()
 
+
+    client1 = Client()
+    client2 = Client()
+    client3 = Client()
+    # some checkpoints
+    cpt1 = client1.create_checkpoint()
+    cpt2 = client1.create_checkpoint()
+    cpt3 = client1.create_checkpoint()
+    cpt4 = client1.create_checkpoint()
+
+    # client1 scans
+    client1.scan(cpt1)
+    client1.at_home()
+    client1.scan(cpt2)
+    client1.scan(cpt3)
+    client1.scan(cpt1)
+    client1.scan(cpt2)
+
+    # client2 scans
+    client2.scan(cpt1)
+    client2.scan(cpt4)
+
+    # client3 scans
+    client3.scan(cpt4)
+
+    # client1 report
+    client1.report()
+
+    # client3 check
+    client3.is_safe()
 
 
 

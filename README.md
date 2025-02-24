@@ -53,6 +53,8 @@ python client.py
 
 2. **Setting a rate limit when "Check Am I Safe".** This prevents attackers from forging their visited places and timestamps, and from using brute-force attempts to infer risky locations stored on the server.
 
+3. **Removing "from home" and "to home" histories** when reporting or checking is the user safe.
+
 **My main improvement to the code -- – Using Private Set Intersection (PSI)"**
 
 While the server does not want to publicly disclose the list of high-risk locations, users may also be reluctant to expose their travel history to the server each time they check for infection risk. (This is different from the case where infected users *voluntarily* report their travel history to the server through a trusted institution.) 
@@ -80,3 +82,5 @@ If we use $E_s$  to represent encryption with the server's private key and $E_u$
 I used `SHA-256` to encrypt data. Since this encryption is commutative, meaning that encrypting first with one key and then with another yields the same result regardless of the order. Thus user can compare doubly encrpted data from server and from local to determine if there is a match.
 
 The core functionality of PSI has been tested in the `test_psi2` file.
+
+There are also some demo code in the  `__main__` of `client.py`. (just visit some places, report to be infected and ask server have I visited high risk )
