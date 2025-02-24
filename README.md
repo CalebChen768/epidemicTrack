@@ -7,7 +7,7 @@ This is an implementation for a Data Protection Technologies course assignment. 
 Firstly, run the following command to start a mysql docker container.
 
 ```bash
-docker compose up -d # or docker-compose for some older version I think.
+docker compose up -d # or docker-compose for some older versions, I think.
 ```
 
 Then install required packages, initalize the database and start the server.
@@ -83,4 +83,4 @@ I used `SHA-256` to encrypt data. Since this encryption is commutative, meaning 
 
 The core functionality of PSI has been tested in the `test_psi2` file.
 
-There are also some demo code in the  `__main__` of `client.py`. (just visit some places, report to be infected and ask server have I visited high risk )
+There are also some demo code in the  `__main__` of `client.py`. Client 1 visited some place and report to be infected. Client 2 visited a place at the same time with Client 1 and then visited a place that Client 1 never been to. Client 3 visited that place. Then Client 2 should be in high risk and Client 3 should be in meduim risk. (align with the design from the paper)
